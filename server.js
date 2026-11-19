@@ -1,307 +1,376 @@
 
-const API_URL = "https://foodie-cafe-backend-1.onrender.com/api/menu";
-const ORDER_API = "https://foodie-cafe-backend-1.onrender.com/api/orders";
+const express = require("express");
+const mongoose = require("mongoose");
+const cors = require("cors");
+require("dotenv").config();
 
-let menuItems = [];
-let cart = [];
-let activeCategory = "all";
+const app = express();
 
-const grid = document.getElementById("menuGrid");
-const rupees = n => "₹" + Number(n).toLocaleString("en-IN");
+// ================= MIDDLEWARE =================
 
-// Load menu items from backend
-async function loadMenu() {
-  grid.innerHTML = '<p class="empty-cart">Loading menu...</p>';
+app.use(cors({
+  origin: [
+    "https://foodie-cafe-frontend.vercel.app",
+    "http://localhost:3000",
+    "http://127.0.0.1:5500"
+  ]
+}));
 
+app.use(express.json());
+
+// ================= MENU MODEL =================
+
+const menuSchema = new mongoose.Schema({
+  id: Number,
+  name: String,
+  category: String,
+  tag: String,
+  price: Number,
+  desc: String,
+  image: String,
+  available: {
+    type: Boolean,
+    default: true
+  }
+});
+
+const Menu = mongoose.model("Menu", menuSchema);
+
+// ================= ORDER MODEL =================
+
+const orderSchema = new mongoose.Schema({
+  customerName: {
+    type: String,
+    required: true,
+    trim: true
+  },
+  mobile: {
+    type: String,
+    required: true,
+    trim: true
+  },
+  items: [{
+    itemId: Number,
+    name: String,
+    price: Number,
+    quantity: Number
+  }],
+  total: {
+    type: Number,
+    required: true
+  },
+  status: {
+    type: String,
+    default: "Pending"
+  }
+}, {
+  timestamps: true
+});
+
+const Order = mongoose.model("Order", orderSchema);
+
+// ================= STARTER MENU =================
+
+const starterMenu = [
+  {
+    id: 1,
+    name: "Velvet Cappuccino",
+    category: "coffee",
+    tag: "BESTSELLER",
+    price: 160,
+    desc: "Rich espresso, silky milk and a soft cocoa finish.",
+    image: "https://images.unsplash.com/photo-1534778101976-628a944c3a69?auto=format&fit=crop&w=700&q=80"
+  },
+  {
+    id: 2,
+    name: "Iced Caramel Latte",
+    category: "coffee",
+    tag: "CHILLED FAVOURITE",
+    price: 190,
+    desc: "Smooth espresso over ice with buttery caramel.",
+    image: "https://images.unsplash.com/photo-1461023058943-07fcbe16d735?auto=format&fit=crop&w=700&q=80"
+  },
+  {
+    id: 3,
+    name: "Cafe Club Sandwich",
+    category: "food",
+    tag: "FRESH PICK",
+    price: 220,
+    desc: "Toasted layers, crisp veggies and our house sauce.",
+    image: "https://images.unsplash.com/photo-1521390188846-e2a3a97453a0?auto=format&fit=crop&w=700&q=80"
+  },
+  {
+    id: 4,
+    name: "Margherita Pizza",
+    category: "food",
+    tag: "CLASSIC",
+    price: 280,
+    desc: "Golden crust, fresh basil and gooey mozzarella.",
+    image: "https://images.unsplash.com/photo-1579751626657-72bc17010498?auto=format&fit=crop&w=700&q=80"
+  },
+  {
+    id: 5,
+    name: "Chocolate Brownie",
+    category: "dessert",
+    tag: "SWEET TOOTH",
+    price: 150,
+    desc: "Fudgy centre, crisp edges and pure chocolate joy.",
+    image: "https://images.unsplash.com/photo-1606313564200-e75d5e30476c?auto=format&fit=crop&w=700&q=80"
+  },
+  {
+    id: 6,
+    name: "Strawberry Cheesecake",
+    category: "dessert",
+    tag: "HOUSE FAVOURITE",
+    price: 210,
+    desc: "Creamy cheesecake with a bright berry topping.",
+    image: "https://images.unsplash.com/photo-1533134242443-d4fd215305ad?auto=format&fit=crop&w=700&q=80"
+  },
+  {
+    id: 7,
+    name: "Mango Smoothie",
+    category: "drinks",
+    tag: "FRUITY & FRESH",
+    price: 170,
+    desc: "A sunny blend of mango, yoghurt and a little love.",
+    image: "https://images.unsplash.com/photo-1505252585461-04db1eb84625?auto=format&fit=crop&w=700&q=80"
+  },
+  {
+    id: 8,
+    name: "Classic Cold Coffee",
+    category: "drinks",
+    tag: "COOL DOWN",
+    price: 180,
+    desc: "Creamy, chilled coffee blended until perfectly frothy.",
+    image: "https://images.unsplash.com/photo-1517701604599-bb29b565090c?auto=format&fit=crop&w=700&q=80"
+  }
+];
+
+// ================= HEALTH CHECK =================
+
+app.get("/", (req, res) => {
+  res.send("Foodie Cafe Backend is running!");
+});
+
+app.get("/api/health", (req, res) => {
+  res.json({
+    success: true,
+    message: "Foodie Cafe API is working"
+  });
+});
+
+// ================= MENU API =================
+
+app.get("/api/menu", async (req, res) => {
   try {
-    const response = await fetch(API_URL);
-    const result = await response.json();
+    let items = await Menu.find({
+      available: true
+    }).sort({ id: 1 });
 
-    if (!response.ok || !result.success || !Array.isArray(result.data)) {
-      throw new Error("Menu could not be loaded");
+    if (items.length === 0) {
+      await Menu.insertMany(starterMenu);
+      items = await Menu.find({
+        available: true
+      }).sort({ id: 1 });
     }
 
-    menuItems = result.data.map(item => ({
-      ...item,
-      id: Number(item.id),
-      price: Number(item.price),
-      name: item.name || "Menu item",
-      category: item.category || "food",
-      tag: item.tag || "",
-      desc: item.desc || "",
-      image: item.image || ""
-    }));
-
-    renderMenu();
-
-  } catch (error) {
-    console.error("Menu loading error:", error);
-    grid.innerHTML =
-      '<p class="empty-cart">Unable to load menu. Please refresh the page.</p>';
-  }
-}
-
-// Display menu items
-function renderMenu() {
-  const query = document.getElementById("searchInput").value
-    .trim()
-    .toLowerCase();
-
-  const filtered = menuItems.filter(item =>
-    (activeCategory === "all" || item.category === activeCategory) &&
-    (
-      item.name.toLowerCase().includes(query) ||
-      item.desc.toLowerCase().includes(query)
-    )
-  );
-
-  grid.innerHTML = filtered.length
-    ? filtered.map(item => `
-      <article class="menu-card">
-        <div class="food-photo">
-          <img
-            src="${item.image}"
-            alt="${item.name}"
-            loading="lazy"
-            onerror="this.style.display='none'"
-          >
-          <span class="food-tag">${item.tag}</span>
-        </div>
-
-        <div class="menu-info">
-          <h3>${item.name}</h3>
-          <p>${item.desc}</p>
-          <div class="menu-meta">
-            <strong>${rupees(item.price)}</strong>
-            <button
-              class="add-button"
-              data-add="${item.id}"
-              aria-label="Add ${item.name} to order"
-            >+</button>
-          </div>
-        </div>
-      </article>
-    `).join("")
-    : '<p class="empty-cart">No items found. Try another search.</p>';
-}
-
-// Update shopping cart
-function updateCart() {
-  document.getElementById("cartCount").textContent =
-    cart.reduce((sum, item) => sum + item.qty, 0);
-
-  document.getElementById("cartTotal").textContent =
-    rupees(cart.reduce((sum, item) => sum + item.price * item.qty, 0));
-
-  const box = document.getElementById("cartItems");
-
-  box.innerHTML = cart.length
-    ? cart.map(item => `
-      <div class="cart-row">
-        <div>
-          <strong>${item.name}</strong>
-          <small>${rupees(item.price)} each</small>
-        </div>
-
-        <div class="quantity">
-          <button
-            data-change="${item.id}"
-            data-delta="-1"
-            aria-label="Remove one"
-          >−</button>
-
-          <span>${item.qty}</span>
-
-          <button
-            data-change="${item.id}"
-            data-delta="1"
-            aria-label="Add one"
-          >+</button>
-        </div>
-      </div>
-    `).join("")
-    : '<p class="empty-cart">Your basket is waiting for something delicious.</p>';
-}
-
-// Show notification
-function toast(message) {
-  const el = document.getElementById("toast");
-  el.textContent = message;
-  el.classList.add("show");
-
-  setTimeout(() => {
-    el.classList.remove("show");
-  }, 1900);
-}
-
-// Add items to cart
-grid.addEventListener("click", event => {
-  const btn = event.target.closest("[data-add]");
-  if (!btn) return;
-
-  const item = menuItems.find(
-    x => x.id === Number(btn.dataset.add)
-  );
-
-  if (!item) return;
-
-  const found = cart.find(x => x.id === item.id);
-
-  if (found) {
-    found.qty++;
-  } else {
-    cart.push({ ...item, qty: 1 });
-  }
-
-  updateCart();
-  toast(item.name + " added to your order");
-});
-
-// Menu category filters
-document.getElementById("filters").addEventListener("click", event => {
-  const btn = event.target.closest("[data-category]");
-  if (!btn) return;
-
-  activeCategory = btn.dataset.category;
-
-  document.querySelectorAll(".filter").forEach(button => {
-    button.classList.toggle("active", button === btn);
-  });
-
-  renderMenu();
-});
-
-// Menu search
-document.getElementById("searchInput").addEventListener("input", renderMenu);
-
-// Increase or decrease cart quantity
-document.getElementById("cartItems").addEventListener("click", event => {
-  const btn = event.target.closest("[data-change]");
-  if (!btn) return;
-
-  const item = cart.find(
-    x => x.id === Number(btn.dataset.change)
-  );
-
-  if (!item) return;
-
-  item.qty += Number(btn.dataset.delta);
-
-  if (item.qty <= 0) {
-    cart = cart.filter(x => x.id !== item.id);
-  }
-
-  updateCart();
-});
-
-// Cart drawer
-const drawer = document.getElementById("cartDrawer");
-const overlay = document.getElementById("cartOverlay");
-
-function openCart() {
-  drawer.classList.add("open");
-  overlay.classList.add("open");
-  drawer.setAttribute("aria-hidden", "false");
-}
-
-function closeCart() {
-  drawer.classList.remove("open");
-  overlay.classList.remove("open");
-  drawer.setAttribute("aria-hidden", "true");
-}
-
-document.getElementById("cartOpen").addEventListener("click", openCart);
-document.getElementById("cartClose").addEventListener("click", closeCart);
-overlay.addEventListener("click", closeCart);
-
-// Real checkout - save order in MongoDB
-document.getElementById("checkout").addEventListener("click", async () => {
-
-  if (!cart.length) {
-    toast("Add something tasty first!");
-    return;
-  }
-
-  const customerName = prompt("Please enter your full name:");
-
-  if (customerName === null || !customerName.trim()) {
-    toast("Please enter your name.");
-    return;
-  }
-
-  const mobile = prompt("Please enter your 10-digit mobile number:");
-
-  if (mobile === null || !/^[0-9]{10}$/.test(mobile.trim())) {
-    toast("Enter a valid 10-digit mobile number.");
-    return;
-  }
-
-  const orderData = {
-    customerName: customerName.trim(),
-    mobile: mobile.trim(),
-    items: cart.map(item => ({
-      id: item.id,
-      quantity: item.qty
-    }))
-  };
-
-  const checkoutButton = document.getElementById("checkout");
-  checkoutButton.disabled = true;
-
-  try {
-    const response = await fetch(ORDER_API, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify(orderData)
+    res.json({
+      success: true,
+      count: items.length,
+      data: items
     });
 
-    const result = await response.json();
+  } catch (error) {
+    console.error("Menu error:", error);
 
-    if (!response.ok || !result.success) {
-      throw new Error(result.message || "Order could not be placed.");
+    res.status(500).json({
+      success: false,
+      message: "Could not load menu"
+    });
+  }
+});
+
+// ================= CREATE ORDER API =================
+
+app.post("/api/orders", async (req, res) => {
+  try {
+    const {
+      customerName,
+      mobile,
+      items
+    } = req.body;
+
+    if (
+      typeof customerName !== "string" ||
+      !customerName.trim() ||
+      typeof mobile !== "string" ||
+      !/^[0-9]{10}$/.test(mobile) ||
+      !Array.isArray(items) ||
+      items.length === 0 ||
+      items.length > 50
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "Please provide a valid name, mobile number and items"
+      });
     }
 
-    toast("Order placed successfully!");
+    const orderItems = [];
+    let total = 0;
 
-    cart = [];
-    updateCart();
-    closeCart();
+    for (const item of items) {
+      const id = Number(item.id);
+      const quantity = Number(item.quantity);
+
+      if (
+        !Number.isInteger(id) ||
+        !Number.isInteger(quantity) ||
+        quantity < 1 ||
+        quantity > 50
+      ) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid item or quantity"
+        });
+      }
+
+      const menuItem = await Menu.findOne({
+        id: id,
+        available: true
+      });
+
+      if (!menuItem) {
+        return res.status(400).json({
+          success: false,
+          message: "Menu item not available"
+        });
+      }
+
+      orderItems.push({
+        itemId: menuItem.id,
+        name: menuItem.name,
+        price: menuItem.price,
+        quantity: quantity
+      });
+
+      total += menuItem.price * quantity;
+    }
+
+    const newOrder = await Order.create({
+      customerName: customerName.trim(),
+      mobile: mobile,
+      items: orderItems,
+      total: total,
+      status: "Pending"
+    });
+
+    res.status(201).json({
+      success: true,
+      message: "Order placed successfully",
+      data: newOrder
+    });
 
   } catch (error) {
-    console.error("Checkout error:", error);
-    toast(error.message || "Unable to place order. Try again.");
-  } finally {
-    checkoutButton.disabled = false;
+    console.error("Order creation error:", error);
+
+    res.status(500).json({
+      success: false,
+      message: "Could not save order"
+    });
   }
-
 });
 
-// Mobile navigation
-const toggle = document.getElementById("menuToggle");
-const nav = document.getElementById("nav");
+// ================= GET ALL ORDERS API =================
 
-toggle.addEventListener("click", () => {
-  const open = nav.classList.toggle("open");
+app.get("/api/orders", async (req, res) => {
+  try {
+    const orders = await Order.find()
+      .sort({ createdAt: -1 });
 
-  toggle.setAttribute("aria-expanded", String(open));
-  toggle.textContent = open ? "×" : "☰";
+    res.json({
+      success: true,
+      count: orders.length,
+      data: orders
+    });
+
+  } catch (error) {
+    console.error("Get orders error:", error);
+
+    res.status(500).json({
+      success: false,
+      message: "Could not fetch orders"
+    });
+  }
 });
 
-nav.querySelectorAll("a").forEach(link => {
-  link.addEventListener("click", () => {
-    nav.classList.remove("open");
-    toggle.setAttribute("aria-expanded", "false");
-    toggle.textContent = "☰";
+// ================= UPDATE ORDER STATUS API =================
+
+app.patch("/api/orders/:id/status", async (req, res) => {
+  try {
+    const allowedStatuses = [
+      "Pending",
+      "Preparing",
+      "Completed",
+      "Cancelled"
+    ];
+
+    if (!allowedStatuses.includes(req.body.status)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid order status"
+      });
+    }
+
+    const order = await Order.findByIdAndUpdate(
+      req.params.id,
+      {
+        status: req.body.status
+      },
+      {
+        new: true,
+        runValidators: true
+      }
+    );
+
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        message: "Order not found"
+      });
+    }
+
+    res.json({
+      success: true,
+      data: order
+    });
+
+  } catch (error) {
+    console.error("Update status error:", error);
+
+    res.status(500).json({
+      success: false,
+      message: "Could not update order status"
+    });
+  }
+});
+
+// ================= DATABASE CONNECTION =================
+
+const PORT = process.env.PORT || 5000;
+
+mongoose.connect(process.env.MONGODB_URI)
+  .then(() => {
+    console.log("MongoDB Connected Successfully");
+  })
+  .catch(error => {
+    console.error("MongoDB Connection Error:", error.message);
   });
+
+// ================= START SERVER =================
+
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
 });
 
-// Start website
-document.getElementById("year").textContent =
-  new Date().getFullYear();
-
-updateCart();
-loadMenu();
 
 
