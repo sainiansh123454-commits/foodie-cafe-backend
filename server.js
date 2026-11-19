@@ -2,9 +2,12 @@
 const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
+const bcrypt = require("bcryptjs");
+const jwt = require("jsonwebtoken");
 require("dotenv").config();
 
 const app = express();
+const PORT = process.env.PORT || 5000;
 
 // ================= MIDDLEWARE =================
 
@@ -17,6 +20,36 @@ app.use(cors({
 }));
 
 app.use(express.json());
+
+// ================= USER MODEL =================
+
+const userSchema = new mongoose.Schema({
+  name: {
+    type: String,
+    required: true,
+    trim: true
+  },
+  email: {
+    type: String,
+    required: true,
+    unique: true,
+    lowercase: true,
+    trim: true
+  },
+  password: {
+    type: String,
+    required: true
+  },
+  role: {
+    type: String,
+    enum: ["user", "admin"],
+    default: "user"
+  }
+}, {
+  timestamps: true
+});
+
+const User = mongoose.model("User", userSchema);
 
 // ================= MENU MODEL =================
 
@@ -146,6 +179,70 @@ const starterMenu = [
   }
 ];
 
+// ================= JWT AUTHENTICATION =================
+
+function createToken(user) {
+  return jwt.sign(
+    {
+      id: user._id,
+      email: user.email,
+      role: user.role
+    },
+    process.env.JWT_SECRET,
+    {
+      expiresIn: "7d"
+    }
+  );
+}
+
+async function authenticateToken(req, res, next) {
+  try {
+    const authHeader = req.headers.authorization;
+
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      return res.status(401).json({
+        success: false,
+        message: "Please login first"
+      });
+    }
+
+    const token = authHeader.split(" ")[1];
+
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
+    const user = await User.findById(decoded.id).select("-password");
+
+    if (!user) {
+      return res.status(401).json({
+        success: false,
+        message: "User account not found"
+      });
+    }
+
+    req.user = user;
+    next();
+
+  } catch (error) {
+    return res.status(401).json({
+      success: false,
+      message: "Invalid or expired login session"
+    });
+  }
+}
+
+// ================= ADMIN AUTHENTICATION =================
+
+function adminOnly(req, res, next) {
+  if (!req.user || req.user.role !== "admin") {
+    return res.status(403).json({
+      success: false,
+      message: "Admin access required"
+    });
+  }
+
+  next();
+}
+
 // ================= HEALTH CHECK =================
 
 app.get("/", (req, res) => {
@@ -159,6 +256,156 @@ app.get("/api/health", (req, res) => {
   });
 });
 
+// ================= USER SIGNUP API =================
+
+app.post("/api/auth/register", async (req, res) => {
+  try {
+    const { name, email, password } = req.body;
+
+    if (
+      typeof name !== "string" ||
+      !name.trim() ||
+      typeof email !== "string" ||
+      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim()) ||
+      typeof password !== "string" ||
+      password.length < 8 ||
+      password.length > 72
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "Enter a valid name, email and password of 8-72 characters"
+      });
+    }
+
+    const cleanEmail = email.trim().toLowerCase();
+
+    const existingUser = await User.findOne({
+      email: cleanEmail
+    });
+
+    if (existingUser) {
+      return res.status(409).json({
+        success: false,
+        message: "This email is already registered"
+      });
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 12);
+
+    const newUser = await User.create({
+      name: name.trim(),
+      email: cleanEmail,
+      password: hashedPassword
+    });
+
+    const token = createToken(newUser);
+
+    res.status(201).json({
+      success: true,
+      message: "Account created successfully",
+      token,
+      user: {
+        id: newUser._id,
+        name: newUser.name,
+        email: newUser.email,
+        role: newUser.role
+      }
+    });
+
+  } catch (error) {
+    console.error("Signup error:", error);
+
+    res.status(500).json({
+      success: false,
+      message: "Could not create account"
+    });
+  }
+});
+
+// ================= USER LOGIN API =================
+
+app.post("/api/auth/login", async (req, res) => {
+  try {
+    const { email, password } = req.body;
+
+    if (
+      typeof email !== "string" ||
+      typeof password !== "string" ||
+      !email.trim() ||
+      !password
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "Please enter email and password"
+      });
+    }
+
+    const user = await User.findOne({
+      email: email.trim().toLowerCase()
+    });
+
+    if (!user) {
+      return res.status(401).json({
+        success: false,
+        message: "Invalid email or password"
+      });
+    }
+
+    const passwordMatch = await bcrypt.compare(
+      password,
+      user.password
+    );
+
+    if (!passwordMatch) {
+      return res.status(401).json({
+        success: false,
+        message: "Invalid email or password"
+      });
+    }
+
+    const token = createToken(user);
+
+    res.json({
+      success: true,
+      message: "Login successful",
+      token,
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role
+      }
+    });
+
+  } catch (error) {
+    console.error("Login error:", error);
+
+    res.status(500).json({
+      success: false,
+      message: "Login failed"
+    });
+  }
+});
+
+// ================= USER PROFILE API =================
+
+app.get(
+  "/api/auth/me",
+  authenticateToken,
+  async (req, res) => {
+    res.json({
+      success: true,
+      user: {
+        id: req.user._id,
+        name: req.user.name,
+        email: req.user.email,
+        role: req.user.role,
+        createdAt: req.user.createdAt
+      }
+    });
+  }
+);
+
 // ================= MENU API =================
 
 app.get("/api/menu", async (req, res) => {
@@ -169,6 +416,7 @@ app.get("/api/menu", async (req, res) => {
 
     if (items.length === 0) {
       await Menu.insertMany(starterMenu);
+
       items = await Menu.find({
         available: true
       }).sort({ id: 1 });
@@ -194,11 +442,7 @@ app.get("/api/menu", async (req, res) => {
 
 app.post("/api/orders", async (req, res) => {
   try {
-    const {
-      customerName,
-      mobile,
-      items
-    } = req.body;
+    const { customerName, mobile, items } = req.body;
 
     if (
       typeof customerName !== "string" ||
@@ -235,7 +479,7 @@ app.post("/api/orders", async (req, res) => {
       }
 
       const menuItem = await Menu.findOne({
-        id: id,
+        id,
         available: true
       });
 
@@ -250,7 +494,7 @@ app.post("/api/orders", async (req, res) => {
         itemId: menuItem.id,
         name: menuItem.name,
         price: menuItem.price,
-        quantity: quantity
+        quantity
       });
 
       total += menuItem.price * quantity;
@@ -258,9 +502,9 @@ app.post("/api/orders", async (req, res) => {
 
     const newOrder = await Order.create({
       customerName: customerName.trim(),
-      mobile: mobile,
+      mobile,
       items: orderItems,
-      total: total,
+      total,
       status: "Pending"
     });
 
@@ -282,95 +526,112 @@ app.post("/api/orders", async (req, res) => {
 
 // ================= GET ALL ORDERS API =================
 
-app.get("/api/orders", async (req, res) => {
-  try {
-    const orders = await Order.find()
-      .sort({ createdAt: -1 });
+app.get(
+  "/api/orders",
+  authenticateToken,
+  adminOnly,
+  async (req, res) => {
+    try {
+      const orders = await Order.find()
+        .sort({ createdAt: -1 });
 
-    res.json({
-      success: true,
-      count: orders.length,
-      data: orders
-    });
+      res.json({
+        success: true,
+        count: orders.length,
+        data: orders
+      });
 
-  } catch (error) {
-    console.error("Get orders error:", error);
+    } catch (error) {
+      console.error("Get orders error:", error);
 
-    res.status(500).json({
-      success: false,
-      message: "Could not fetch orders"
-    });
+      res.status(500).json({
+        success: false,
+        message: "Could not fetch orders"
+      });
+    }
   }
-});
+);
 
 // ================= UPDATE ORDER STATUS API =================
 
-app.patch("/api/orders/:id/status", async (req, res) => {
-  try {
-    const allowedStatuses = [
-      "Pending",
-      "Preparing",
-      "Completed",
-      "Cancelled"
-    ];
+app.patch(
+  "/api/orders/:id/status",
+  authenticateToken,
+  adminOnly,
+  async (req, res) => {
+    try {
+      const allowedStatuses = [
+        "Pending",
+        "Preparing",
+        "Completed",
+        "Cancelled"
+      ];
 
-    if (!allowedStatuses.includes(req.body.status)) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid order status"
-      });
-    }
-
-    const order = await Order.findByIdAndUpdate(
-      req.params.id,
-      {
-        status: req.body.status
-      },
-      {
-        new: true,
-        runValidators: true
+      if (!allowedStatuses.includes(req.body.status)) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid order status"
+        });
       }
-    );
 
-    if (!order) {
-      return res.status(404).json({
+      const order = await Order.findByIdAndUpdate(
+        req.params.id,
+        {
+          status: req.body.status
+        },
+        {
+          new: true,
+          runValidators: true
+        }
+      );
+
+      if (!order) {
+        return res.status(404).json({
+          success: false,
+          message: "Order not found"
+        });
+      }
+
+      res.json({
+        success: true,
+        data: order
+      });
+
+    } catch (error) {
+      console.error("Update status error:", error);
+
+      res.status(500).json({
         success: false,
-        message: "Order not found"
+        message: "Could not update order status"
       });
     }
-
-    res.json({
-      success: true,
-      data: order
-    });
-
-  } catch (error) {
-    console.error("Update status error:", error);
-
-    res.status(500).json({
-      success: false,
-      message: "Could not update order status"
-    });
   }
-});
+);
 
 // ================= DATABASE CONNECTION =================
 
-const PORT = process.env.PORT || 5000;
+async function startServer() {
+  try {
+    if (!process.env.MONGODB_URI) {
+      throw new Error("MONGODB_URI is missing");
+    }
 
-mongoose.connect(process.env.MONGODB_URI)
-  .then(() => {
+    if (!process.env.JWT_SECRET) {
+      throw new Error("JWT_SECRET is missing");
+    }
+
+    await mongoose.connect(process.env.MONGODB_URI);
+
     console.log("MongoDB Connected Successfully");
-  })
-  .catch(error => {
-    console.error("MongoDB Connection Error:", error.message);
-  });
 
-// ================= START SERVER =================
+    app.listen(PORT, () => {
+      console.log(`Server running on port ${PORT}`);
+    });
 
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-});
+  } catch (error) {
+    console.error("Server startup error:", error.message);
+    process.exit(1);
+  }
+}
 
-
-
+startServer();
