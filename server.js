@@ -24,11 +24,7 @@ app.use(express.json());
 // ================= USER MODEL =================
 
 const userSchema = new mongoose.Schema({
-  name: {
-    type: String,
-    required: true,
-    trim: true
-  },
+  name: { type: String, required: true, trim: true },
   email: {
     type: String,
     required: true,
@@ -36,18 +32,13 @@ const userSchema = new mongoose.Schema({
     lowercase: true,
     trim: true
   },
-  password: {
-    type: String,
-    required: true
-  },
+  password: { type: String, required: true },
   role: {
     type: String,
     enum: ["user", "admin"],
     default: "user"
   }
-}, {
-  timestamps: true
-});
+}, { timestamps: true });
 
 const User = mongoose.model("User", userSchema);
 
@@ -96,13 +87,11 @@ const orderSchema = new mongoose.Schema({
     type: String,
     default: "Pending"
   }
-}, {
-  timestamps: true
-});
+}, { timestamps: true });
 
 const Order = mongoose.model("Order", orderSchema);
 
-// ================= STARTER MENU =================
+// ================= ORIGINAL STARTER MENU =================
 
 const starterMenu = [
   {
@@ -179,6 +168,157 @@ const starterMenu = [
   }
 ];
 
+// ================= ADDITIONAL MENU ITEMS =================
+
+const additionalMenu = [
+  // PIZZA
+  {
+    id: 9,
+    name: "Farmhouse Pizza",
+    category: "pizza",
+    tag: "POPULAR",
+    price: 320,
+    desc: "Loaded with fresh vegetables, cheese and delicious sauce.",
+    image: "https://images.unsplash.com/photo-1513104890138-7c749659a591?auto=format&fit=crop&w=700&q=80",
+    available: true
+  },
+  {
+    id: 10,
+    name: "Cheese Burst Pizza",
+    category: "pizza",
+    tag: "CHEESE LOVER",
+    price: 350,
+    desc: "Delicious pizza with a rich cheese-filled crust.",
+    image: "https://images.unsplash.com/photo-1571407970349-bc81e7e96d47?auto=format&fit=crop&w=700&q=80",
+    available: true
+  },
+  {
+    id: 11,
+    name: "Paneer Tikka Pizza",
+    category: "pizza",
+    tag: "CHEF SPECIAL",
+    price: 330,
+    desc: "Paneer tikka, capsicum, onion and melted cheese.",
+    image: "https://images.unsplash.com/photo-1579751626657-72bc17010498?auto=format&fit=crop&w=700&q=80",
+    available: true
+  },
+
+  // BURGERS
+  {
+    id: 12,
+    name: "Classic Veg Burger",
+    category: "burger",
+    tag: "BESTSELLER",
+    price: 120,
+    desc: "Crispy vegetable patty with lettuce and special sauce.",
+    image: "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?auto=format&fit=crop&w=700&q=80",
+    available: true
+  },
+  {
+    id: 13,
+    name: "Cheese Burger",
+    category: "burger",
+    tag: "CHEESY",
+    price: 160,
+    desc: "Vegetable patty topped with melted cheese.",
+    image: "https://images.unsplash.com/photo-1550547660-d9450f859349?auto=format&fit=crop&w=700&q=80",
+    available: true
+  },
+  {
+    id: 14,
+    name: "Double Patty Burger",
+    category: "burger",
+    tag: "SPECIAL",
+    price: 200,
+    desc: "Two delicious vegetable patties with cheese.",
+    image: "https://images.unsplash.com/photo-1571091718767-18b5b1457add?auto=format&fit=crop&w=700&q=80",
+    available: true
+  },
+  {
+    id: 15,
+    name: "Paneer Burger",
+    category: "burger",
+    tag: "HOUSE SPECIAL",
+    price: 180,
+    desc: "Spiced paneer patty with fresh vegetables and sauce.",
+    image: "https://images.unsplash.com/photo-1572802419224-296b0aeee0d9?auto=format&fit=crop&w=700&q=80",
+    available: true
+  },
+
+  // PASTA
+  {
+    id: 16,
+    name: "White Sauce Pasta",
+    category: "pasta",
+    tag: "CREAMY FAVOURITE",
+    price: 180,
+    desc: "Creamy white sauce pasta with herbs and vegetables.",
+    image: "https://images.unsplash.com/photo-1645112411341-6c4fd023714a?auto=format&fit=crop&w=700&q=80",
+    available: true
+  },
+  {
+    id: 17,
+    name: "Red Sauce Pasta",
+    category: "pasta",
+    tag: "ITALIAN STYLE",
+    price: 170,
+    desc: "Pasta tossed in rich and tangy tomato sauce.",
+    image: "https://images.unsplash.com/photo-1473093295043-cdd812d0e601?auto=format&fit=crop&w=700&q=80",
+    available: true
+  },
+  {
+    id: 18,
+    name: "Pink Sauce Pasta",
+    category: "pasta",
+    tag: "CHEF SPECIAL",
+    price: 200,
+    desc: "A tasty combination of creamy and tomato sauce.",
+    image: "https://images.unsplash.com/photo-1551183053-bf91a1d81141?auto=format&fit=crop&w=700&q=80",
+    available: true
+  },
+  {
+    id: 19,
+    name: "Cheese Pasta",
+    category: "pasta",
+    tag: "CHEESE LOVER",
+    price: 220,
+    desc: "Creamy cheesy pasta with herbs and vegetables.",
+    image: "https://images.unsplash.com/photo-1556761223-4c4282c73f77?auto=format&fit=crop&w=700&q=80",
+    available: true
+  }
+];
+
+// ================= SEED MENU SAFELY =================
+
+async function seedMenu() {
+  // Add starter menu only if the collection is empty.
+  const count = await Menu.countDocuments();
+
+  if (count === 0) {
+    await Menu.insertMany(starterMenu);
+    console.log("Original menu added.");
+  }
+
+  // Correct existing Margherita Pizza category.
+  await Menu.updateOne(
+    { id: 4 },
+    { $set: { category: "pizza" } }
+  );
+
+  // Add new items only if their IDs do not already exist.
+  const operations = additionalMenu.map(item => ({
+    updateOne: {
+      filter: { id: item.id },
+      update: { $setOnInsert: item },
+      upsert: true
+    }
+  }));
+
+  await Menu.bulkWrite(operations);
+
+  console.log("Additional pizza, burger and pasta items checked.");
+}
+
 // ================= JWT AUTHENTICATION =================
 
 function createToken(user) {
@@ -189,9 +329,7 @@ function createToken(user) {
       role: user.role
     },
     process.env.JWT_SECRET,
-    {
-      expiresIn: "7d"
-    }
+    { expiresIn: "7d" }
   );
 }
 
@@ -207,7 +345,6 @@ async function authenticateToken(req, res, next) {
     }
 
     const token = authHeader.split(" ")[1];
-
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
     const user = await User.findById(decoded.id).select("-password");
@@ -279,9 +416,7 @@ app.post("/api/auth/register", async (req, res) => {
 
     const cleanEmail = email.trim().toLowerCase();
 
-    const existingUser = await User.findOne({
-      email: cleanEmail
-    });
+    const existingUser = await User.findOne({ email: cleanEmail });
 
     if (existingUser) {
       return res.status(409).json({
@@ -410,17 +545,9 @@ app.get(
 
 app.get("/api/menu", async (req, res) => {
   try {
-    let items = await Menu.find({
+    const items = await Menu.find({
       available: true
     }).sort({ id: 1 });
-
-    if (items.length === 0) {
-      await Menu.insertMany(starterMenu);
-
-      items = await Menu.find({
-        available: true
-      }).sort({ id: 1 });
-    }
 
     res.json({
       success: true,
@@ -576,13 +703,8 @@ app.patch(
 
       const order = await Order.findByIdAndUpdate(
         req.params.id,
-        {
-          status: req.body.status
-        },
-        {
-          new: true,
-          runValidators: true
-        }
+        { status: req.body.status },
+        { new: true, runValidators: true }
       );
 
       if (!order) {
@@ -623,6 +745,9 @@ async function startServer() {
     await mongoose.connect(process.env.MONGODB_URI);
 
     console.log("MongoDB Connected Successfully");
+
+    // Automatically add the new menu items.
+    await seedMenu();
 
     app.listen(PORT, () => {
       console.log(`Server running on port ${PORT}`);
