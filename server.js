@@ -9,6 +9,8 @@ require("dotenv").config();
 const app = express();
 const PORT = process.env.PORT || 5000;
 
+// ================= MIDDLEWARE =================
+
 app.use(cors({
   origin: [
     "https://foodie-cafe-frontend.vercel.app",
@@ -16,6 +18,7 @@ app.use(cors({
     "http://127.0.0.1:5500"
   ]
 }));
+
 app.use(express.json());
 
 // ================= USER MODEL =================
@@ -94,50 +97,74 @@ const Order = mongoose.model("Order", orderSchema);
 
 const starterMenu = [
   {
-    id: 1, name: "Velvet Cappuccino", category: "coffee",
-    tag: "BESTSELLER", price: 160,
+    id: 1,
+    name: "Velvet Cappuccino",
+    category: "coffee",
+    tag: "BESTSELLER",
+    price: 160,
     desc: "Rich espresso, silky milk and a soft cocoa finish.",
     image: "https://images.unsplash.com/photo-1534778101976-628a944c3a69?auto=format&fit=crop&w=700&q=80"
   },
   {
-    id: 2, name: "Iced Caramel Latte", category: "coffee",
-    tag: "CHILLED FAVOURITE", price: 190,
+    id: 2,
+    name: "Iced Caramel Latte",
+    category: "coffee",
+    tag: "CHILLED FAVOURITE",
+    price: 190,
     desc: "Smooth espresso over ice with buttery caramel.",
     image: "https://images.unsplash.com/photo-1461023058943-07fcbe16d735?auto=format&fit=crop&w=700&q=80"
   },
   {
-    id: 3, name: "Cafe Club Sandwich", category: "food",
-    tag: "FRESH PICK", price: 220,
+    id: 3,
+    name: "Cafe Club Sandwich",
+    category: "food",
+    tag: "FRESH PICK",
+    price: 220,
     desc: "Toasted layers, crisp veggies and our house sauce.",
     image: "https://images.unsplash.com/photo-1521390188846-e2a3a97453a0?auto=format&fit=crop&w=700&q=80"
   },
   {
-    id: 4, name: "Margherita Pizza", category: "food",
-    tag: "CLASSIC", price: 280,
+    id: 4,
+    name: "Margherita Pizza",
+    category: "pizza",
+    tag: "CLASSIC",
+    price: 280,
     desc: "Golden crust, fresh basil and gooey mozzarella.",
     image: "https://images.unsplash.com/photo-1579751626657-72bc17010498?auto=format&fit=crop&w=700&q=80"
   },
   {
-    id: 5, name: "Chocolate Brownie", category: "dessert",
-    tag: "SWEET TOOTH", price: 150,
+    id: 5,
+    name: "Chocolate Brownie",
+    category: "dessert",
+    tag: "SWEET TOOTH",
+    price: 150,
     desc: "Fudgy centre, crisp edges and pure chocolate joy.",
     image: "https://images.unsplash.com/photo-1606313564200-e75d5e30476c?auto=format&fit=crop&w=700&q=80"
   },
   {
-    id: 6, name: "Strawberry Cheesecake", category: "dessert",
-    tag: "HOUSE FAVOURITE", price: 210,
+    id: 6,
+    name: "Strawberry Cheesecake",
+    category: "dessert",
+    tag: "HOUSE FAVOURITE",
+    price: 210,
     desc: "Creamy cheesecake with a bright berry topping.",
     image: "https://images.unsplash.com/photo-1533134242443-d4fd215305ad?auto=format&fit=crop&w=700&q=80"
   },
   {
-    id: 7, name: "Mango Smoothie", category: "drinks",
-    tag: "FRUITY & FRESH", price: 170,
+    id: 7,
+    name: "Mango Smoothie",
+    category: "drinks",
+    tag: "FRUITY & FRESH",
+    price: 170,
     desc: "A sunny blend of mango, yoghurt and a little love.",
     image: "https://images.unsplash.com/photo-1505252585461-04db1eb84625?auto=format&fit=crop&w=700&q=80"
   },
   {
-    id: 8, name: "Classic Cold Coffee", category: "drinks",
-    tag: "COOL DOWN", price: 180,
+    id: 8,
+    name: "Classic Cold Coffee",
+    category: "drinks",
+    tag: "COOL DOWN",
+    price: 180,
     desc: "Creamy, chilled coffee blended until perfectly frothy.",
     image: "https://images.unsplash.com/photo-1517701604599-bb29b565090c?auto=format&fit=crop&w=700&q=80"
   }
@@ -145,78 +172,111 @@ const starterMenu = [
 
 const additionalMenu = [
   {
-    id: 9, name: "Farmhouse Pizza", category: "pizza",
-    tag: "POPULAR", price: 320,
+    id: 9,
+    name: "Farmhouse Pizza",
+    category: "pizza",
+    tag: "POPULAR",
+    price: 320,
     desc: "Loaded with fresh vegetables, cheese and delicious sauce.",
     image: "https://images.unsplash.com/photo-1513104890138-7c749659a591?auto=format&fit=crop&w=700&q=80",
     available: true
   },
   {
-    id: 10, name: "Cheese Burst Pizza", category: "pizza",
-    tag: "CHEESE LOVER", price: 350,
+    id: 10,
+    name: "Cheese Burst Pizza",
+    category: "pizza",
+    tag: "CHEESE LOVER",
+    price: 350,
     desc: "Delicious pizza with a rich cheese-filled crust.",
     image: "https://images.unsplash.com/photo-1571407970349-bc81e7e96d47?auto=format&fit=crop&w=700&q=80",
     available: true
   },
   {
-    id: 11, name: "Paneer Tikka Pizza", category: "pizza",
-    tag: "CHEF SPECIAL", price: 330,
+    id: 11,
+    name: "Paneer Tikka Pizza",
+    category: "pizza",
+    tag: "CHEF SPECIAL",
+    price: 330,
     desc: "Paneer tikka, capsicum, onion and melted cheese.",
     image: "https://images.unsplash.com/photo-1579751626657-72bc17010498?auto=format&fit=crop&w=700&q=80",
     available: true
   },
   {
-    id: 12, name: "Classic Veg Burger", category: "burger",
-    tag: "BESTSELLER", price: 120,
+    id: 12,
+    name: "Classic Veg Burger",
+    category: "burger",
+    tag: "BESTSELLER",
+    price: 120,
     desc: "Crispy vegetable patty with lettuce and special sauce.",
     image: "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?auto=format&fit=crop&w=700&q=80",
     available: true
   },
   {
-    id: 13, name: "Cheese Burger", category: "burger",
-    tag: "CHEESY", price: 160,
+    id: 13,
+    name: "Cheese Burger",
+    category: "burger",
+    tag: "CHEESY",
+    price: 160,
     desc: "Vegetable patty topped with melted cheese.",
     image: "https://images.unsplash.com/photo-1550547660-d9450f859349?auto=format&fit=crop&w=700&q=80",
     available: true
   },
   {
-    id: 14, name: "Double Patty Burger", category: "burger",
-    tag: "SPECIAL", price: 200,
+    id: 14,
+    name: "Double Patty Burger",
+    category: "burger",
+    tag: "SPECIAL",
+    price: 200,
     desc: "Two delicious vegetable patties with cheese.",
     image: "https://images.unsplash.com/photo-1571091718767-18b5b1457add?auto=format&fit=crop&w=700&q=80",
     available: true
   },
   {
-    id: 15, name: "Paneer Burger", category: "burger",
-    tag: "HOUSE SPECIAL", price: 180,
+    id: 15,
+    name: "Paneer Burger",
+    category: "burger",
+    tag: "HOUSE SPECIAL",
+    price: 180,
     desc: "Spiced paneer patty with fresh vegetables and sauce.",
     image: "https://images.unsplash.com/photo-1572802419224-296b0aeee0d9?auto=format&fit=crop&w=700&q=80",
     available: true
   },
   {
-    id: 16, name: "White Sauce Pasta", category: "pasta",
-    tag: "CREAMY FAVOURITE", price: 180,
+    id: 16,
+    name: "White Sauce Pasta",
+    category: "pasta",
+    tag: "CREAMY FAVOURITE",
+    price: 180,
     desc: "Creamy white sauce pasta with herbs and vegetables.",
     image: "https://images.unsplash.com/photo-1645112411341-6c4fd023714a?auto=format&fit=crop&w=700&q=80",
     available: true
   },
   {
-    id: 17, name: "Red Sauce Pasta", category: "pasta",
-    tag: "ITALIAN STYLE", price: 170,
+    id: 17,
+    name: "Red Sauce Pasta",
+    category: "pasta",
+    tag: "ITALIAN STYLE",
+    price: 170,
     desc: "Pasta tossed in rich and tangy tomato sauce.",
     image: "https://images.unsplash.com/photo-1473093295043-cdd812d0e601?auto=format&fit=crop&w=700&q=80",
     available: true
   },
   {
-    id: 18, name: "Pink Sauce Pasta", category: "pasta",
-    tag: "CHEF SPECIAL", price: 200,
+    id: 18,
+    name: "Pink Sauce Pasta",
+    category: "pasta",
+    tag: "CHEF SPECIAL",
+    price: 200,
     desc: "A tasty combination of creamy and tomato sauce.",
     image: "https://images.unsplash.com/photo-1551183053-bf91a1d81141?auto=format&fit=crop&w=700&q=80",
     available: true
   },
   {
-    id: 19, name: "Cheese Pasta", category: "pasta",
-    tag: "CHEESE LOVER", price: 220,
+    id: 19,
+    name: "Cheese Pasta",
+    category: "pasta",
+    tag: "CHEESE LOVER",
+    price: 220,
     desc: "Creamy cheesy pasta with herbs and vegetables.",
     image: "https://images.unsplash.com/photo-1556761223-4c4282c73f77?auto=format&fit=crop&w=700&q=80",
     available: true
@@ -265,6 +325,8 @@ function createToken(user) {
   );
 }
 
+// ================= AUTHENTICATION =================
+
 async function authenticateToken(req, res, next) {
   try {
     const authHeader = req.headers.authorization;
@@ -306,6 +368,7 @@ function adminOnly(req, res, next) {
       message: "Admin access required"
     });
   }
+
   next();
 }
 
@@ -372,6 +435,7 @@ app.post("/api/auth/register", async (req, res) => {
 
   } catch (error) {
     console.error("Signup error:", error);
+
     res.status(500).json({
       success: false,
       message: "Could not create account"
@@ -421,9 +485,72 @@ app.post("/api/auth/login", async (req, res) => {
 
   } catch (error) {
     console.error("Login error:", error);
+
     res.status(500).json({
       success: false,
       message: "Login failed"
+    });
+  }
+});
+
+// ================= ONE-TIME ADMIN SETUP =================
+
+app.post("/api/auth/setup-admin", async (req, res) => {
+  try {
+    const { email, setupSecret } = req.body;
+
+    if (
+      !process.env.ADMIN_SETUP_SECRET ||
+      typeof setupSecret !== "string" ||
+      setupSecret !== process.env.ADMIN_SETUP_SECRET
+    ) {
+      return res.status(403).json({
+        success: false,
+        message: "Invalid setup secret"
+      });
+    }
+
+    const existingAdmin = await User.findOne({ role: "admin" });
+
+    if (existingAdmin) {
+      return res.status(403).json({
+        success: false,
+        message: "An admin account already exists"
+      });
+    }
+
+    if (typeof email !== "string" || !email.trim()) {
+      return res.status(400).json({
+        success: false,
+        message: "Enter your registered email"
+      });
+    }
+
+    const user = await User.findOne({
+      email: email.trim().toLowerCase()
+    });
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "Registered account not found"
+      });
+    }
+
+    user.role = "admin";
+    await user.save();
+
+    res.json({
+      success: true,
+      message: "Your account is now an admin account"
+    });
+
+  } catch (error) {
+    console.error("Admin setup error:", error);
+
+    res.status(500).json({
+      success: false,
+      message: "Admin setup failed"
     });
   }
 });
@@ -459,6 +586,7 @@ app.get("/api/menu", async (req, res) => {
 
   } catch (error) {
     console.error("Menu error:", error);
+
     res.status(500).json({
       success: false,
       message: "Could not load menu"
@@ -466,7 +594,7 @@ app.get("/api/menu", async (req, res) => {
   }
 });
 
-// ================= CREATE ORDER WITH ADDRESS =================
+// ================= CREATE ORDER =================
 
 app.post("/api/orders", async (req, res) => {
   try {
@@ -486,7 +614,7 @@ app.post("/api/orders", async (req, res) => {
     ) {
       return res.status(400).json({
         success: false,
-        message: "Enter a valid name, 10-digit mobile number, full delivery address and items."
+        message: "Enter a valid name, mobile number, full address and items."
       });
     }
 
@@ -548,6 +676,7 @@ app.post("/api/orders", async (req, res) => {
 
   } catch (error) {
     console.error("Order creation error:", error);
+
     res.status(500).json({
       success: false,
       message: "Could not save order"
@@ -573,6 +702,7 @@ app.get(
 
     } catch (error) {
       console.error("Get orders error:", error);
+
       res.status(500).json({
         success: false,
         message: "Could not fetch orders"
@@ -623,6 +753,7 @@ app.patch(
 
     } catch (error) {
       console.error("Update status error:", error);
+
       res.status(500).json({
         success: false,
         message: "Could not update order status"
@@ -644,12 +775,13 @@ async function startServer() {
     }
 
     await mongoose.connect(process.env.MONGODB_URI);
+
     console.log("MongoDB Connected Successfully");
 
     await seedMenu();
 
     app.listen(PORT, () => {
-      console.log(`Server running on port ${PORT}`);
+      console.log(`Foodie Cafe running on port ${PORT}`);
     });
 
   } catch (error) {
